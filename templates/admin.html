@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hellas Direct Admin</title>
+    <link rel="icon" href="{{ url_for('static', filename='images/images.png') }}" />
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
+</head>
+<body>
+    <div class="container">
+        <aside class="sidebar">
+            <div class="logo-container">
+                <img src="{{ url_for('static', filename='images/hd-logo.png') }}" alt="Hellas Direct" class="logo">
+            </div>
+            
+            <div class="sessions-list">
+                <div class="sessions-header">
+                    <h2>Cases</h2>
+                    <button class="refresh-btn" onclick="loadSessions()">
+                        <span>↻</span>
+                        <span>Refresh</span>
+                    </button>
+                </div>
+                <div id="sessions">
+                    <!-- Sessions will be loaded here -->
+                </div>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <div class="chat-container">
+                <div class="case-info" id="case-info">
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-value" id="total-sessions">0</div>
+                            <div class="stat-label">Total Cases</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="active-sessions">0</div>
+                            <div class="stat-label">Active Cases</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="ended-sessions">0</div>
+                            <div class="stat-label">Completed Cases</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="with-customer">0</div>
+                            <div class="stat-label">With Customer Info</div>
+                        </div>
+                    </div>
+                    <h3>Case Information</h3>
+                    <!-- Case info will be loaded here -->
+                </div>
+
+                <div class="messages-section">
+                    <div class="chat-header">
+                        <h2>Chat History</h2>
+                    </div>
+                    
+                    <div id="empty-state" class="empty-state">
+                        Select a session to view messages
+                    </div>
+                    
+                    <div id="messages-container" class="messages-container" style="display: none;">
+                        <!-- Messages will be loaded here -->
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        let currentSessionId = null;
+
+        async function loadSessions() {
+            try {
+                const response = await fetch('/get_sessions');
+                const data = await response.json();
+                
+                if (data.sessions) {
+                    displaySessions(data.sessions);
+                }
+            } catch (error) {
+                console.error('Error loading sessions:', error);
+            }
+        }
+
+        function displaySessions(sessions) {
+            const totalSessions = sessions.length;
+            const activeSessions = sessions.filter(s => s.status === 'active').length;
+            const endedSessions = sessions.filter(s => s.status === 'ended').length;
+            const withCustomerName = sessions.filter(s => s.customer_name).length;
+
+            // Update stats
+            document.getElementById('total-sessions').textContent = totalSessions;
+            document.getElementById('active-sessions').textContent = activeSessions;
+            document.getElementById('ended-sessions').textContent = endedSessions;
+            document.getElementById('with-customer').textContent = withCustomerName;
+
+            const sessionsHtml = sessions.map(session => `
+                <div class="session-card ${session.session_id === currentSessionId ? 'active' : ''}" 
+                     onclick="loadMessages('${session.session_id}')">
+                    <div class="session-info">
+                        <div class="info-group">
+                            <span class="info-label">Case ID</span>
+                            <span class="info-value">${session.session_id.substring(0, 8)}...</span>
+                        </div>
+                        
+                        <div class="info-group">
+                            <span class="info-label">Plate Number</span>
+                            <span class="info-value">${session.registration_number || 'Not provided'}</span>
+                        </div>
+                        
+                        <div class="info-group">
+                            <span class="info-label">Status</span>
+                            <span class="info-value status-badge ${session.status === 'active' ? 'status-active' : 'status-ended'}">
+                                ${session.status.toUpperCase()}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+            
+            document.getElementById('sessions').innerHTML = sessionsHtml;
+        }
+
+        async function loadMessages(sessionId) {
+            try {
+                currentSessionId = sessionId;
+                
+                // Update active session visual
+                document.querySelectorAll('.session-card').forEach(card => {
+                    card.classList.remove('active');
+                });
+                document.querySelector(`.session-card[onclick*="${sessionId}"]`).classList.add('active');
+                
+                // Show messages container
+                document.getElementById('empty-state').style.display = 'none';
+                document.getElementById('messages-container').style.display = 'flex';
+                
+                // Load case information
+                const caseResponse = await fetch(`/get_case_info?session_id=${sessionId}`);
+                const caseData = await caseResponse.json();
+                
+                if (caseData.case) {
+                    const statsHtml = document.querySelector('.stats-grid').outerHTML;
+                    const caseInfoHtml = displayCaseInfo(caseData.case);
+                    document.getElementById('case-info').innerHTML = statsHtml + '<h3>Case Information</h3>' + caseInfoHtml;
+                }
+
+                // Load messages
+                const response = await fetch(`/get_chat_history?session_id=${sessionId}`);
+                const data = await response.json();
+                
+                if (data.messages) {
+                    displayMessages(data.messages);
+                }
+            } catch (error) {
+                console.error('Error loading session data:', error);
+            }
+        }
+
+        function displayMessages(messages) {
+            const messagesHtml = messages.map(message => `
+                <div class="message ${message.sender}">
+                    <div class="message-header">
+                        ${message.sender === 'user' ? '👤 Customer' : '🤖 Assistant'}
+                    </div>
+                    <div class="message-content">
+                        ${message.message}
+                    </div>
+                </div>
+            `).join('');
+            
+            const container = document.getElementById('messages-container');
+            container.innerHTML = messagesHtml;
+            
+            // Scroll to bottom after content is loaded
+            setTimeout(() => {
+                container.scrollTop = container.scrollHeight;
+            }, 100);
+        }
+
+        function displayCaseInfo(caseData) {
+            return `
+                <div class="case-fields-grid">
+                    <div class="case-field">
+                        <div class="case-field-label">🏷️ Case Type</div>
+                        <div class="case-field-value">${caseData.case_type || 'Not determined'}</div>
+                    </div>
+                    <div class="case-field">
+                        <div class="case-field-label">👤 Customer Name</div>
+                        <div class="case-field-value">${caseData.customer_name || 'Not provided'}</div>
+                    </div>
+                    <div class="case-field">
+                        <div class="case-field-label">📝 Registration Number</div>
+                        <div class="case-field-value">${caseData.registration_number || 'Not provided'}</div>
+                    </div>
+                    <div class="case-field">
+                        <div class="case-field-label">📍 Location</div>
+                        <div class="case-field-value">${caseData.location || 'Not provided'}</div>
+                    </div>
+                    <div class="case-field full-width">
+                        <div class="case-field-label">📄 Case Description</div>
+                        <div class="case-field-value">${caseData.description || 'Not provided'}</div>
+                    </div>
+                    <div class="case-field">
+                        <div class="case-field-label">🔧 Vehicle Malfunction</div>
+                        <div class="case-field-value">${caseData.analysis?.possible_vehicle_malfunction || 'Not analyzed'}</div>
+                    </div>
+                    <div class="case-field">
+                        <div class="case-field-label">💡 Recommended Resolution</div>
+                        <div class="case-field-value">${caseData.analysis?.possible_problem_resolution || 'Not analyzed'}</div>
+                    </div>
+                    <div class="case-field full-width">
+                        <div class="case-field-label">🚩 Case Flags</div>
+                        <div class="case-flags">
+                            <div class="flag-item ${caseData.flags?.is_fast_track ? 'flag-true' : 'flag-false'}">
+                                ⚡ Fast Track: ${caseData.flags?.is_fast_track ? 'Yes' : 'No'}
+                            </div>
+                            <div class="flag-item ${caseData.flags?.is_fraud ? 'flag-true' : 'flag-false'}">
+                                ⚠️ Fraud Risk: ${caseData.flags?.is_fraud ? 'Yes' : 'No'}
+                            </div>
+                            <div class="flag-item ${caseData.flags?.delay_voucher_used ? 'flag-true' : 'flag-false'}">
+                                🎫 Delay Voucher: ${caseData.flags?.delay_voucher_used ? 'Yes' : 'No'}
+                            </div>
+                            <div class="flag-item ${caseData.flags?.geolocation_link_sent ? 'flag-true' : 'flag-false'}">
+                                📍 Geolocation Sent: ${caseData.flags?.geolocation_link_sent ? 'Yes' : 'No'}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="case-field">
+                        <div class="case-field-label">📊 Communication Quality</div>
+                        <div class="case-field-value">${caseData.summary?.communication_quality || 'Not assessed'}</div>
+                    </div>
+                    <div class="case-field">
+                        <div class="case-field-label">🏷️ Tags</div>
+                        <div class="case-field-value">${caseData.summary?.tags?.join(', ') || 'None'}</div>
+                    </div>
+                    <div class="case-field full-width">
+                        <div class="case-field-label">📋 Chat Summary</div>
+                        <div class="case-field-value">${caseData.summary?.short_summary || 'Not provided'}</div>
+                    </div>
+                    <div class="case-field full-width">
+                        <div class="case-field-label">📸 Case Images</div>
+                        <div class="case-images-grid">
+                            ${caseData.images ? caseData.images.map(img => `
+                                <div class="case-image-card">
+                                    <img src="${img.url}" alt="Case image" onclick="showImageDetails(this, ${JSON.stringify(img)})">
+                                    <div class="image-info">
+                                        <span class="image-type">${img.type || 'Unknown type'}</span>
+                                        <span class="image-timestamp">${new Date(img.timestamp).toLocaleString()}</span>
+                                    </div>
+                                </div>
+                            `).join('') : 'No images uploaded'}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Image modal functionality
+        function showImageDetails(imgElement, imageData) {
+            const modal = document.createElement('div');
+            modal.className = 'image-modal';
+            
+            const content = document.createElement('div');
+            content.className = 'modal-content';
+            
+            const img = document.createElement('img');
+            img.src = imageData.url;
+            img.alt = 'Case image';
+            
+            const info = document.createElement('div');
+            info.className = 'image-details';
+            info.innerHTML = `
+                <h3>Image Analysis</h3>
+                <p><strong>Type:</strong> ${imageData.type || 'Unknown'}</p>
+                <p><strong>Original File:</strong> ${imageData.original_filename}</p>
+                <p><strong>Uploaded:</strong> ${new Date(imageData.timestamp).toLocaleString()}</p>
+                ${imageData.analysis ? `
+                    <div class="analysis-details">
+                        ${imageData.analysis.damage_description ? `<p><strong>Damage:</strong> ${imageData.analysis.damage_description}</p>` : ''}
+                        ${imageData.analysis.license_plate ? `<p><strong>License Plate:</strong> ${imageData.analysis.license_plate}</p>` : ''}
+                        ${imageData.analysis.vehicle_make_model ? `<p><strong>Vehicle:</strong> ${imageData.analysis.vehicle_make_model}</p>` : ''}
+                        ${imageData.analysis.location_details ? `<p><strong>Location:</strong> ${imageData.analysis.location_details}</p>` : ''}
+                        ${imageData.analysis.severity ? `<p><strong>Severity:</strong> ${imageData.analysis.severity}</p>` : ''}
+                        ${imageData.analysis.recommended_action ? `<p><strong>Recommended Action:</strong> ${imageData.analysis.recommended_action}</p>` : ''}
+                    </div>
+                ` : ''}
+            `;
+            
+            const closeBtn = document.createElement('button');
+            closeBtn.className = 'modal-close';
+            closeBtn.innerHTML = '×';
+            closeBtn.onclick = () => modal.remove();
+            
+            content.appendChild(closeBtn);
+            content.appendChild(img);
+            content.appendChild(info);
+            modal.appendChild(content);
+            
+            modal.onclick = (e) => {
+                if (e.target === modal) modal.remove();
+            };
+            
+            document.body.appendChild(modal);
+        }
+
+        // Load sessions when page loads
+        window.onload = loadSessions;
+
+        // Auto-refresh every 30 seconds
+        setInterval(loadSessions, 30000);
+    </script>
+</body>
+</html> 

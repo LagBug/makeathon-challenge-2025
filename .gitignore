@@ -1,0 +1,83 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Flask instance folder (keep if you want, but DB will be tracked)
+instance/
+
+uploads/
+
+# SQLite database files
+*.sqlite3
+*.db
+
+# Environment variables and secrets
+.env
+*.env
+
+# Virtual environment
+venv/
+env/
+ENV/
+.venv/
+
+# macOS system files
+.DS_Store
+
+# VSCode settings (optional)
+.vscode/
+
+# PyCharm settings (optional)
+.idea/
+
+# Log files
+*.log
+
+# Cache
+.cache/
+*.egg-info/
+.eggs/
+*.pot
+*.pyc
+*.pyo
+
+# Coverage reports
+htmlcov/
+.coverage
+.tox/
+.nox/
+.cache/
+.coverage.*
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+
+# Testing output
+test-results/
+tests/__pycache__/
+
+# Node-related (if any frontend uses npm/yarn)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Build outputs
+dist/
+build/
+*.egg
+*.whl
+
+# Temporary files
+*.swp
+*.swo
+*.tmp
+*.bak
+
+# Jupyter Notebooks (if any experimentation)
+.ipynb_checkpoints/
+
+# OpenAI API usage logs (if you're saving them)
+openai_api.log

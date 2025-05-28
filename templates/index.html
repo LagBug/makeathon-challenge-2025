@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Hellas Direct ChatBot</title>
+  <link rel="shortcut icon" type="image/png" href="{{ url_for('static', filename='images/images.png') }}" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Open+Sans&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.12.2/lottie.min.js"></script>
+</head>
+<body>
+  <div class="phone-container">
+    <nav class="navbar">
+      <img src="{{ url_for('static', filename='images/hd-logo.png') }}" alt="Hellas Direct" class="navbar-logo" />
+      <div style="display: flex; align-items: center;">
+        <button id="clear-chat-btn" class="empty-btn trash-btn" onclick="clearChat()" title="Clear Chat">
+          <i class="fas fa-trash"></i>
+        </button>
+        <button id="tts-toggle" class="empty-btn volume-btn" onclick="toggleTTS()" aria-pressed="false" title="Toggle Text-to-Speech">
+          <i class="fas fa-volume-mute"></i>
+        </button>
+        <button id="theme-toggle" class="theme-toggle" aria-label="Toggle theme">
+          <i class="fas fa-moon"></i>
+        </button>
+      </div>
+    </nav>
+    <div class="chat-container">
+      <div class="chat-messages">
+        <div id="lottie-background"></div>
+        <div id="messages"></div>
+      </div>
+      <form id="chat-form" onsubmit="sendMessage(event)">
+        <div class="input-group">
+          <input
+            type="text"
+            id="userInput"
+            autocomplete="off"
+            placeholder="Γράψε εδώ..."
+            required
+          />
+          <div class="button-group">
+            <button type="submit" class="send-btn">
+              <i class="fas fa-paper-plane"></i>
+            </button>
+            <button type="button" class="voice-btn" onclick="handleVoiceInput()">
+              <i class="fas fa-microphone"></i>
+            </button>
+            <button type="button" class="upload-btn" onclick="handleImageUpload()">
+              <i class="fas fa-plus"></i>
+            </button>
+            <input type="file" id="imageInput" accept="image/*" style="display: none;">
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>
